@@ -5,7 +5,7 @@ from database import models
 from models import schemas
 from services.ml_service import predict_crop, predict_disease, detect_weather_anomaly
 from services.weather_service import fetch_weather, check_severe_weather
-from services.gemini_service import generate_farming_plan
+from services.gemini_service import generate_farming_plan, chat_with_assistant, validate_crops_for_location
 from services.maharashtra_crop_service import get_regional_crops, get_regional_context, merge_recommendations
 from services.sms_service import send_weather_alert_sms
 import datetime
@@ -37,9 +37,30 @@ def recommend_crop(input_id: int, db: Session = Depends(get_db)):
         temp=weather["temperature"], rainfall=weather["rainfall"]
     )
 
+    # Groq-powered geographic validation — correct ML predictions for the actual location
+    soil = {"N": db_input.N, "P": db_input.P, "K": db_input.K, "pH": db_input.pH}
+    validation = validate_crops_for_location(
+        ml_crops=ml_result["top_crops"],
+        location=db_input.location,
+        soil=soil,
+        weather=weather
+    )
+    if validation.get("corrections_made") and validation.get("validated_crops"):
+        # Replace ML crops with geographically validated crops
+        validated = validation["validated_crops"][:3]
+        # Keep original scores structure, pad if needed
+        scores = ml_result["scores"][:len(validated)]
+        while len(scores) < len(validated):
+            scores.append(round(scores[-1] - 0.05, 2) if scores else 0.75)
+        ml_result = {"top_crops": validated, "scores": scores}
+
     # Maharashtra regional intelligence
     regional_data = get_regional_crops(db_input.location)
     enriched = merge_recommendations(ml_result, regional_data)
+
+    # Attach validation notes if corrections were made
+    if validation.get("corrections_made"):
+        enriched["location_notes"] = validation.get("location_notes", "")
 
     return enriched
 
@@ -130,6 +151,16 @@ def register_phone(phone: str, db: Session = Depends(get_db)):
     numbers = [n.strip() for n in existing.split(",") if n.strip()]
     if phone not in numbers:
         numbers.append(phone)
-        # Update env var in memory (persists for session; user should add to .env)
         os.environ["ALERT_PHONE_NUMBERS"] = ",".join(numbers)
     return {"message": f"Phone {phone} registered for weather alerts.", "total_registered": len(numbers)}
+
+
+@router.post("/chat")
+def chat(request: schemas.ChatRequest):
+    """Farming assistant chatbot powered by Gemini."""
+    reply = chat_with_assistant(
+        message=request.message,
+        history=request.history,
+        context=request.context
+    )
+    return {"reply": reply}

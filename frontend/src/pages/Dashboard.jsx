@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Calendar, ChevronDown, ChevronUp, AlertTriangle, Leaf, Clock, CheckCircle2 } from 'lucide-react';
+import { useLang } from '../i18n/LanguageContext';
 
-const PRIORITY_STYLE = {
-  high:   { color: '#ef4444', bg: 'rgba(239,68,68,0.12)',   label: 'High'   },
-  medium: { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  label: 'Medium' },
-  low:    { color: '#10b981', bg: 'rgba(16,185,129,0.12)',  label: 'Low'    },
+const PRIORITY_STYLE_BASE = {
+  high:   { color: '#ef4444', bg: 'rgba(239,68,68,0.12)'  },
+  medium: { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
+  low:    { color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
 };
 
 const PHASE_COLORS = [
@@ -12,7 +13,9 @@ const PHASE_COLORS = [
 ];
 
 function PriorityBadge({ priority }) {
-  const s = PRIORITY_STYLE[priority?.toLowerCase()] || PRIORITY_STYLE.medium;
+  const { t } = useLang();
+  const s = PRIORITY_STYLE_BASE[priority?.toLowerCase()] || PRIORITY_STYLE_BASE.medium;
+  const label = t(priority?.toLowerCase() || 'medium');
   return (
     <span style={{
       background: s.bg, color: s.color,
@@ -20,14 +23,15 @@ function PriorityBadge({ priority }) {
       borderRadius: '20px', padding: '2px 10px',
       fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.04em'
     }}>
-      {s.label}
+      {label}
     </span>
   );
 }
 
 function DayCard({ dayData }) {
+  const { t } = useLang();
   const [open, setOpen] = useState(false);
-  const p = PRIORITY_STYLE[dayData.priority?.toLowerCase()] || PRIORITY_STYLE.medium;
+  const p = PRIORITY_STYLE_BASE[dayData.priority?.toLowerCase()] || PRIORITY_STYLE_BASE.medium;
 
   return (
     <div style={{
@@ -67,7 +71,7 @@ function DayCard({ dayData }) {
             </span>
             {dayData.tasks.length > 1 && (
               <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginLeft: '6px' }}>
-                +{dayData.tasks.length - 1} more
+                +{dayData.tasks.length - 1} {t('more')}
               </span>
             )}
           </div>
@@ -83,7 +87,7 @@ function DayCard({ dayData }) {
         <div style={{ padding: '0 16px 14px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
           <div style={{ paddingTop: '12px' }}>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Tasks for Day {dayData.day}
+              {t('tasksFor')} {dayData.day}
             </p>
             <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
               {dayData.tasks.map((task, i) => (
@@ -174,6 +178,7 @@ function PhaseSection({ phase, phaseData, colorIdx }) {
 }
 
 export default function Dashboard() {
+  const { t } = useLang();
   const [plan, setPlan] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -217,8 +222,8 @@ export default function Dashboard() {
       <div className="grid">
         <div className="glass-panel" style={{ textAlign: 'center', padding: '4rem' }}>
           <Calendar size={48} color="var(--text-muted)" style={{ marginBottom: '1rem' }} />
-          <h2>No Farming Plan Yet</h2>
-          <p style={{ color: 'var(--text-muted)' }}>Go to the Input page, enter your soil data, and click "Generate Farming Plan".</p>
+          <h2>{t('noPlan')}</h2>
+          <p style={{ color: 'var(--text-muted)' }}>{t('noPlanDesc')}</p>
         </div>
       </div>
     );
@@ -241,9 +246,9 @@ export default function Dashboard() {
               <Leaf size={26} color="#fff" />
             </div>
             <div>
-              <h2 style={{ margin: 0, fontSize: '1.5rem' }}>{plan.crop} Farming Plan</h2>
+              <h2 style={{ margin: 0, fontSize: '1.5rem' }}>{plan.crop} {t('farmingPlan')}</h2>
               <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                Complete day-by-day itinerary
+                {t('dayByDay')}
               </span>
             </div>
           </div>
@@ -251,16 +256,16 @@ export default function Dashboard() {
             {plan.total_days && (
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--primary)' }}>{plan.total_days}</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Total Days</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t('totalDays')}</div>
               </div>
             )}
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--secondary)' }}>{plan.phases.length}</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Phases</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t('phases')}</div>
             </div>
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#f59e0b' }}>{totalTasks}</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Activity Days</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t('activityDays')}</div>
             </div>
           </div>
         </div>
@@ -302,7 +307,7 @@ export default function Dashboard() {
         <div className="glass-panel" style={{ marginBottom: '2rem', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.8rem' }}>
             <AlertTriangle size={18} color="#f59e0b" />
-            <span style={{ fontWeight: 700, color: '#f59e0b' }}>Important Alerts</span>
+            <span style={{ fontWeight: 700, color: '#f59e0b' }}>{t('importantAlerts')}</span>
           </div>
           {plan.alerts.map((a, i) => (
             <div key={i} style={{ display: 'flex', gap: '8px', padding: '6px 0', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>

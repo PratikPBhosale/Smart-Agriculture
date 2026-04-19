@@ -1,151 +1,187 @@
 import os
 import json
-from google import genai
+from groq import Groq
 
-_api_key = os.getenv("GEMINI_API_KEY", "")
-_client = genai.Client(api_key=_api_key) if _api_key and _api_key != "your_gemini_api_key_here" else None
+_client = None
 
-def generate_farming_plan(location_info: dict, weather_data: dict, soil_data: dict, top_crops: list, regional_context: dict = None):
-    if not _client:
-        # Detailed mock fallback
-        return {
-            "crop": top_crops[0] if top_crops else "Wheat",
-            "total_days": 120,
-            "phases": [
-                {
-                    "phase": "Land Preparation",
-                    "week_range": "Week 1-2",
-                    "days": [
-                        {"day": 1, "tasks": ["Deep plowing to 20-25 cm depth", "Remove weeds and crop residues"], "notes": "Ensure soil is moist before plowing", "priority": "high"},
-                        {"day": 2, "tasks": ["Secondary tillage / harrowing"], "notes": "Break large clods", "priority": "medium"},
-                        {"day": 5, "tasks": ["Apply farmyard manure (10 tons/acre)", "Mix into soil"], "notes": "Use well-decomposed FYM only", "priority": "high"},
-                        {"day": 7, "tasks": ["Soil testing for pH and nutrients", "Level the field"], "notes": "Target pH 6.0-7.0", "priority": "medium"},
-                        {"day": 10, "tasks": ["Apply basal fertilizer (NPK 20:20:0)", "Final field leveling"], "notes": "Based on soil test results", "priority": "high"},
-                        {"day": 14, "tasks": ["Prepare raised beds or furrows", "Install irrigation channels"], "notes": "Row spacing as per crop requirement", "priority": "high"},
-                    ]
-                },
-                {
-                    "phase": "Sowing",
-                    "week_range": "Week 3",
-                    "days": [
-                        {"day": 15, "tasks": ["Seed treatment with fungicide", "Soak seeds for 8 hours"], "notes": "Use Thiram @ 2g/kg seed", "priority": "high"},
-                        {"day": 16, "tasks": ["Sowing at recommended depth (3-4 cm)", "Maintain row-to-row spacing"], "notes": "Sow in morning hours", "priority": "high"},
-                        {"day": 17, "tasks": ["Light irrigation after sowing (pre-emergence)"], "notes": "Do not over-irrigate", "priority": "high"},
-                        {"day": 20, "tasks": ["Check germination rate", "Re-sow gaps if germination < 70%"], "notes": "Expected germination in 5-7 days", "priority": "medium"},
-                    ]
-                },
-                {
-                    "phase": "Vegetative Growth",
-                    "week_range": "Week 4-8",
-                    "days": [
-                        {"day": 21, "tasks": ["First weeding manually or with herbicide"], "notes": "Critical period — weeds compete for nutrients", "priority": "high"},
-                        {"day": 25, "tasks": ["Apply nitrogen top dressing (Urea 20 kg/acre)"], "notes": "Apply after irrigation", "priority": "high"},
-                        {"day": 28, "tasks": ["Irrigation #2", "Scout for pests (aphids, stem borer)"], "notes": "Irrigate at field capacity", "priority": "medium"},
-                        {"day": 35, "tasks": ["Second weeding", "Apply micronutrient spray (Zinc Sulphate)"], "notes": "Zinc deficiency shows as yellow stripes", "priority": "medium"},
-                        {"day": 42, "tasks": ["Irrigation #3", "Apply second nitrogen dose"], "notes": "Monitor crop color — pale green = N deficiency", "priority": "high"},
-                        {"day": 49, "tasks": ["Pest scouting — spray insecticide if threshold crossed", "Foliar spray of potassium"], "notes": "Use neem-based spray as first option", "priority": "medium"},
-                        {"day": 56, "tasks": ["Irrigation #4", "Check for fungal disease symptoms"], "notes": "Look for rust, blight on leaves", "priority": "medium"},
-                    ]
-                },
-                {
-                    "phase": "Flowering & Fruiting",
-                    "week_range": "Week 9-14",
-                    "days": [
-                        {"day": 60, "tasks": ["Irrigation #5 — critical flowering stage", "Stop all herbicide use"], "notes": "Water stress at flowering = yield loss", "priority": "high"},
-                        {"day": 65, "tasks": ["Apply potassium fertilizer (MOP 10 kg/acre)"], "notes": "Improves grain/fruit quality", "priority": "high"},
-                        {"day": 70, "tasks": ["Spray fungicide if disease pressure high", "Irrigation #6"], "notes": "Use Mancozeb or Carbendazim", "priority": "medium"},
-                        {"day": 77, "tasks": ["Monitor pollination", "Remove diseased plants"], "notes": "Ensure bees are present for pollination", "priority": "medium"},
-                        {"day": 84, "tasks": ["Irrigation #7", "Foliar spray of boron for fruit set"], "notes": "Boron improves fruit quality", "priority": "medium"},
-                        {"day": 90, "tasks": ["Stop irrigation 2 weeks before harvest", "Final pest check"], "notes": "Dry conditions improve harvest quality", "priority": "high"},
-                    ]
-                },
-                {
-                    "phase": "Harvest & Post-Harvest",
-                    "week_range": "Week 15-17",
-                    "days": [
-                        {"day": 100, "tasks": ["Check crop maturity indicators", "Arrange harvesting equipment/labor"], "notes": "Grain moisture should be 20-25% at harvest", "priority": "high"},
-                        {"day": 105, "tasks": ["Harvest the crop", "Bundle and transport to threshing area"], "notes": "Harvest in dry weather only", "priority": "high"},
-                        {"day": 108, "tasks": ["Threshing / separation of grain", "Winnowing to remove chaff"], "notes": "Avoid grain damage during threshing", "priority": "high"},
-                        {"day": 110, "tasks": ["Sun-dry grain to 12-14% moisture", "Weigh and record yield"], "notes": "Proper drying prevents mold in storage", "priority": "high"},
-                        {"day": 115, "tasks": ["Store in clean, dry bags", "Apply storage pesticide if needed"], "notes": "Use hermetic bags for long-term storage", "priority": "medium"},
-                        {"day": 120, "tasks": ["Field cleanup — remove crop residues", "Plan next crop rotation"], "notes": "Incorporate residues as green manure", "priority": "low"},
-                    ]
-                }
+def _get_client():
+    """Lazily initialize Groq client so dotenv is loaded first."""
+    global _client
+    if _client is None:
+        api_key = os.getenv("GROQ_API_KEY", "")
+        if api_key:
+            _client = Groq(api_key=api_key)
+    return _client
+
+
+def _call_groq(messages: list, max_tokens: int = 2048, temperature: float = 0.7) -> str:
+    """Make a Groq API call. Returns response text or raises."""
+    client = _get_client()
+    if not client:
+        raise RuntimeError("Groq client not initialized — check GROQ_API_KEY in .env")
+
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=messages,
+        max_tokens=max_tokens,
+        temperature=temperature,
+    )
+    return response.choices[0].message.content.strip()
+
+
+# ── Crop Validation for ANY Location ─────────────────────────────────────────
+
+def validate_crops_for_location(ml_crops: list, location: str, soil: dict, weather: dict) -> dict:
+    """
+    Use Groq to validate and correct ML crop predictions based on actual
+    geographic and agronomic knowledge of ANY location worldwide.
+    Works for Jammu & Kashmir (apple), Kerala (coconut/rubber), Punjab (wheat),
+    Maharashtra districts, or any other region.
+    """
+    client = _get_client()
+    if not client or not location:
+        return {"validated_crops": ml_crops, "corrections_made": False,
+                "location_notes": "", "removed_crops": [], "added_crops": []}
+
+    prompt = f"""You are a world-class agronomist with expert knowledge of crops grown in every region of India and the world.
+
+A machine learning model predicted these crops based only on soil chemistry:
+ML Predictions: {ml_crops}
+
+Farmer's location: {location}
+Soil data: N={soil.get('N')}, P={soil.get('P')}, K={soil.get('K')}, pH={soil.get('pH')}
+Current weather: Temperature={weather.get('temperature')}°C, Rainfall={weather.get('rainfall')}mm/hr, Humidity={weather.get('humidity')}%
+
+Your task — use your geographic and agronomic knowledge:
+1. Identify what region/state/country "{location}" is in
+2. Determine what crops are ACTUALLY and TRADITIONALLY grown in {location}
+3. Check if the ML predictions match real crops grown there
+4. Remove crops that are NOT grown in {location} (e.g. mango is not grown in Kashmir)
+5. Add crops that ARE grown in {location} and match the soil/weather (e.g. apple for Kashmir, coconut for Kerala, wheat for Punjab, cotton for Vidarbha)
+6. Return exactly 3 best crops for this location
+
+Examples:
+- Jammu & Kashmir → Apple, Saffron, Walnut, Cherry, Pear
+- Kerala → Coconut, Rubber, Rice, Banana, Pepper, Cardamom
+- Punjab → Wheat, Rice, Maize, Cotton, Sugarcane
+- Himachal Pradesh → Apple, Potato, Wheat, Maize, Ginger
+- Rajasthan → Bajra, Jowar, Wheat, Mustard, Groundnut
+- Nashik Maharashtra → Grapes, Onion, Tomato, Wheat
+- Buldhana Maharashtra → Cotton, Soybean, Jowar, Tur
+- Nagpur Maharashtra → Orange, Cotton, Soybean
+
+Return ONLY valid JSON, no markdown, no extra text:
+{{
+  "validated_crops": ["Crop1", "Crop2", "Crop3"],
+  "corrections_made": true,
+  "removed_crops": ["crop - reason"],
+  "added_crops": ["crop - reason"],
+  "location_notes": "One sentence about {location}'s agriculture and climate"
+}}"""
+
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": "You are an expert agronomist with global crop knowledge. Return only valid JSON."},
+                {"role": "user", "content": prompt}
             ],
-            "alerts": [
-                "Monitor weather forecast weekly and adjust irrigation schedule accordingly.",
-                "Keep a field diary to record all inputs and observations.",
-                "Contact local agricultural extension officer for region-specific advice."
-            ]
-        }
+            max_tokens=512,
+            temperature=0.2,
+        )
+        text = response.choices[0].message.content.strip()
+        text = text.replace("```json", "").replace("```", "").strip()
+        # Extract JSON if wrapped in other text
+        if "{" in text:
+            start = text.index("{")
+            end = text.rindex("}") + 1
+            text = text[start:end]
+        result = json.loads(text)
+        return result
+    except Exception as e:
+        return {"validated_crops": ml_crops, "corrections_made": False,
+                "location_notes": "", "removed_crops": [], "added_crops": [], "error": str(e)}
 
-    prompt = f"""
-You are an expert agronomist and AI Farming Assistant.
-Generate a DETAILED, DAY-BY-DAY farming itinerary plan for the best crop from the list.
 
-Location: {location_info}
-Current Weather: {weather_data}
-Soil Data (N={soil_data.get('N')}, P={soil_data.get('P')}, K={soil_data.get('K')}, pH={soil_data.get('pH')})
+# ── Farming Plan Generation ───────────────────────────────────────────────────
+
+def generate_farming_plan(location_info: dict, weather_data: dict, soil_data: dict,
+                           top_crops: list, regional_context: dict = None):
+    """Generate a detailed day-by-day farming plan using Groq LLaMA."""
+
+    client = _get_client()
+    if not client:
+        return _mock_farming_plan(top_crops)
+
+    location = location_info.get("location", "India")
+
+    system_msg = (
+        f"You are an expert agronomist and AI Farming Assistant. "
+        f"You generate detailed, practical, day-by-day farming plans specific to {location}. "
+        "Return only valid JSON — no markdown, no code blocks, no extra text."
+    )
+
+    user_content = f"""Generate a DETAILED, DAY-BY-DAY farming itinerary for the best crop from this list.
+
+Location: {location}
+Current Weather: temperature={weather_data.get('temperature')}°C, rainfall={weather_data.get('rainfall')}mm, humidity={weather_data.get('humidity')}%
+Soil: N={soil_data.get('N')}, P={soil_data.get('P')}, K={soil_data.get('K')}, pH={soil_data.get('pH')}
 Top Recommended Crops: {top_crops}
 """
 
-    # Inject Maharashtra regional context if available
     if regional_context and regional_context.get("region_notes"):
-        prompt += f"""
-Regional Context (Maharashtra):
-- Region Notes: {regional_context.get('region_notes', '')}
-"""
+        user_content += f"\nRegional Context:\n- {regional_context.get('region_notes')}"
         if regional_context.get("best_season"):
-            prompt += f"- Best Season: {regional_context.get('best_season')}\n"
+            user_content += f"\n- Best Season: {regional_context.get('best_season')}"
         if regional_context.get("local_varieties"):
-            prompt += f"- Local Varieties: {', '.join(regional_context.get('local_varieties', []))}\n"
+            user_content += f"\n- Local Varieties: {', '.join(regional_context.get('local_varieties', []))}"
         if regional_context.get("gi_tag"):
-            prompt += f"- GI Tag: Yes — this crop has a Geographical Indication tag in this region. Mention this in the plan.\n"
+            user_content += "\n- This crop has a GI tag in this region — mention it."
 
-    prompt += """
-Select the BEST crop and generate a complete farming plan from Day 1 to harvest.
-Group days into phases (Land Preparation, Sowing, Vegetative Growth, Flowering, Harvest).
-Each phase must have a week_range (e.g. "Week 1-2") and multiple specific days.
-Each day must have 2-4 specific actionable tasks, practical notes, and a priority.
+    user_content += """
 
-Return ONLY valid JSON, no markdown, no extra text:
+Return ONLY this JSON structure, no markdown, no extra text:
 {
   "crop": "Best crop name",
-  "total_days": <total days to harvest as integer>,
+  "total_days": <integer>,
   "phases": [
     {
       "phase": "Phase Name",
       "week_range": "Week X-Y",
       "days": [
         {
-          "day": <day number as integer>,
-          "tasks": ["Specific task 1", "Specific task 2", "Specific task 3"],
-          "notes": "Practical tip or warning for this day",
+          "day": <integer>,
+          "tasks": ["Task 1", "Task 2", "Task 3"],
+          "notes": "Practical tip",
           "priority": "high/medium/low"
         }
       ]
     }
   ],
-  "alerts": ["Important alert 1", "Important alert 2"]
+  "alerts": ["Alert 1", "Alert 2"]
 }
 
 Requirements:
-- Include at least 5 phases
-- Each phase must have at least 4-6 specific days
-- Tasks must be very specific and actionable (quantities, methods, timings)
-- Notes must be practical field-level advice
-- Total days should reflect actual crop duration (e.g. wheat=120, rice=150, maize=90)
-- If regional context is provided, incorporate local variety names and GI tag info into the plan
+- At least 5 phases
+- Each phase: 4-6 specific days with actionable tasks
+- Tasks: specific quantities, methods, timings relevant to the location's climate
+- total_days reflects actual crop duration (wheat=120, rice=150, maize=90, apple=365, grapes=180)
+- Incorporate local variety names and GI tag if provided
 """
 
     try:
-        response = _client.models.generate_content(
-            model="gemini-1.5-flash",
-            contents=prompt
-        )
-        text = response.text.replace("```json", "").replace("```", "").strip()
-        data = json.loads(text)
-        return data
+        text = _call_groq([
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": user_content}
+        ], max_tokens=4096)
+
+        text = text.replace("```json", "").replace("```", "").strip()
+        if "{" in text:
+            start = text.index("{")
+            end = text.rindex("}") + 1
+            text = text[start:end]
+        return json.loads(text)
+
     except Exception as e:
         return {
             "crop": top_crops[0] if top_crops else "Unknown",
@@ -153,3 +189,117 @@ Requirements:
             "phases": [],
             "alerts": [f"Failed to generate plan: {str(e)}"]
         }
+
+
+# ── Chatbot ───────────────────────────────────────────────────────────────────
+
+def chat_with_assistant(message: str, history: list = None, context: dict = None) -> str:
+    """Farming assistant chatbot powered by Groq LLaMA."""
+
+    client = _get_client()
+    if not client:
+        return (
+            "KrishiBot is not configured. Please add GROQ_API_KEY to backend/.env "
+            "and restart the server."
+        )
+
+    system_content = """You are KrishiBot, an expert AI Farming Assistant with knowledge of agriculture across India and the world.
+You help farmers with:
+- Crop selection based on soil (N, P, K, pH), weather, and location
+- Farming techniques, irrigation, fertilizer recommendations
+- Plant disease identification and treatment
+- Weather impact on crops and precautions
+- Region-specific crops: Kashmir (Apple, Saffron), Kerala (Coconut, Rubber), Punjab (Wheat, Rice), Maharashtra (Grapes, Orange, Mango), Himachal (Apple, Potato)
+- GI-tagged crops and their cultivation best practices
+- Pest management using IPM (Integrated Pest Management)
+- Organic farming and sustainable agriculture
+
+Guidelines:
+- Give practical, actionable advice specific to the farmer's location
+- Use simple language a farmer can understand
+- Include specific quantities, timings, and methods when relevant
+- Keep responses concise but complete
+- Respond in the same language the user writes in (Hindi, Marathi, English, or any regional language)
+"""
+
+    if context:
+        location = context.get("location", "")
+        if location:
+            system_content += f"\nUser's location: {location}"
+        n = context.get("N", "")
+        if n:
+            system_content += f"\nUser's soil: N={n}, P={context.get('P')}, K={context.get('K')}, pH={context.get('pH')}"
+
+    messages = [{"role": "system", "content": system_content}]
+
+    history = history or []
+    for msg in history[-10:]:
+        if hasattr(msg, 'role'):
+            role_val, content_val = msg.role, msg.content
+        else:
+            role_val = msg.get("role", "user")
+            content_val = msg.get("content", "")
+        groq_role = "user" if role_val == "user" else "assistant"
+        messages.append({"role": groq_role, "content": content_val})
+
+    messages.append({"role": "user", "content": message})
+
+    try:
+        return _call_groq(messages, max_tokens=1024)
+    except Exception as e:
+        return f"Sorry, I couldn't process your question right now. Please try again. (Error: {str(e)})"
+
+
+# ── Mock fallback ─────────────────────────────────────────────────────────────
+
+def _mock_farming_plan(top_crops: list) -> dict:
+    return {
+        "crop": top_crops[0] if top_crops else "Wheat",
+        "total_days": 120,
+        "phases": [
+            {
+                "phase": "Land Preparation", "week_range": "Week 1-2",
+                "days": [
+                    {"day": 1, "tasks": ["Deep plowing to 20-25 cm", "Remove weeds"], "notes": "Ensure soil is moist", "priority": "high"},
+                    {"day": 5, "tasks": ["Apply farmyard manure (10 tons/acre)"], "notes": "Use well-decomposed FYM", "priority": "high"},
+                    {"day": 10, "tasks": ["Apply basal fertilizer NPK 20:20:0", "Final leveling"], "notes": "Based on soil test", "priority": "high"},
+                    {"day": 14, "tasks": ["Prepare beds/furrows", "Install irrigation"], "notes": "Row spacing as per crop", "priority": "high"},
+                ]
+            },
+            {
+                "phase": "Sowing", "week_range": "Week 3",
+                "days": [
+                    {"day": 15, "tasks": ["Seed treatment with fungicide"], "notes": "Use Thiram @ 2g/kg", "priority": "high"},
+                    {"day": 16, "tasks": ["Sowing at 3-4 cm depth"], "notes": "Sow in morning hours", "priority": "high"},
+                    {"day": 20, "tasks": ["Check germination", "Re-sow gaps < 70%"], "notes": "Germination in 5-7 days", "priority": "medium"},
+                ]
+            },
+            {
+                "phase": "Vegetative Growth", "week_range": "Week 4-8",
+                "days": [
+                    {"day": 21, "tasks": ["First weeding"], "notes": "Critical — weeds compete for nutrients", "priority": "high"},
+                    {"day": 28, "tasks": ["Irrigation #2", "Scout for pests"], "notes": "Irrigate at field capacity", "priority": "medium"},
+                    {"day": 42, "tasks": ["Irrigation #3", "Second nitrogen dose"], "notes": "Monitor crop color", "priority": "high"},
+                ]
+            },
+            {
+                "phase": "Flowering", "week_range": "Week 9-12",
+                "days": [
+                    {"day": 60, "tasks": ["Irrigation #4 — critical stage"], "notes": "Water stress = yield loss", "priority": "high"},
+                    {"day": 70, "tasks": ["Apply MOP 10 kg/acre"], "notes": "Improves grain quality", "priority": "high"},
+                ]
+            },
+            {
+                "phase": "Harvest", "week_range": "Week 15-17",
+                "days": [
+                    {"day": 105, "tasks": ["Harvest the crop"], "notes": "Harvest in dry weather", "priority": "high"},
+                    {"day": 110, "tasks": ["Sun-dry to 12-14% moisture"], "notes": "Prevents mold in storage", "priority": "high"},
+                    {"day": 120, "tasks": ["Store in clean dry bags", "Plan crop rotation"], "notes": "Use hermetic bags", "priority": "medium"},
+                ]
+            }
+        ],
+        "alerts": [
+            "Monitor weather forecast weekly and adjust irrigation accordingly.",
+            "Keep a field diary to record all inputs and observations."
+        ]
+    }

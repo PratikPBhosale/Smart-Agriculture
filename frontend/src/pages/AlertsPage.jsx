@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { AlertTriangle, CloudRain, Info, Thermometer, Wind, Droplets, RefreshCw, MessageSquare } from 'lucide-react';
+import { useLang } from '../i18n/LanguageContext';
 
 const SEVERITY_STYLE = {
   High:   { bg: 'rgba(239,68,68,0.1)',   border: 'var(--danger)',   icon: <AlertTriangle size={20} color="#ef4444" /> },
@@ -9,19 +10,14 @@ const SEVERITY_STYLE = {
 };
 
 export default function AlertsPage() {
+  const { t } = useLang();
   const [alerts, setAlerts] = useState([]);
   const [weather, setWeather] = useState(null);
   const [loading, setLoading] = useState(true);
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [phone, setPhone] = useState('');
   const [phoneMsg, setPhoneMsg] = useState('');
-
-  const location = (() => {
-    try {
-      const id = localStorage.getItem('inputId');
-      return id ? null : null; // We'll fetch weather by stored location
-    } catch { return null; }
-  })();
+  const [cityInput, setCityInput] = useState('Pune');
 
   const fetchAlerts = () => {
     fetch('http://localhost:8000/alerts')
@@ -31,23 +27,16 @@ export default function AlertsPage() {
   };
 
   const fetchWeather = (loc) => {
-    if (!loc) return;
+    if (!loc || !loc.trim()) return;
     setWeatherLoading(true);
-    fetch(`http://localhost:8000/weather?location=${encodeURIComponent(loc)}`)
+    fetch(`http://localhost:8000/weather?location=${encodeURIComponent(loc.trim())}`)
       .then(res => res.json())
-      .then(data => { setWeather({ ...data, location: loc }); setWeatherLoading(false); })
+      .then(data => { setWeather({ ...data, location: loc.trim() }); setWeatherLoading(false); })
       .catch(() => setWeatherLoading(false));
   };
 
   useEffect(() => {
     fetchAlerts();
-    // Try to get location from last input
-    const inputId = localStorage.getItem('inputId');
-    if (inputId) {
-      fetch(`http://localhost:8000/recommend?input_id=${inputId}`)
-        .catch(() => {});
-    }
-    // Default weather for Pune
     fetchWeather('Pune');
   }, []);
 
@@ -71,20 +60,26 @@ export default function AlertsPage() {
       <div className="glass-panel" style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.2rem', flexWrap: 'wrap', gap: '1rem' }}>
           <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <CloudRain size={24} color="var(--secondary)" /> Live Weather Monitor
+            <CloudRain size={24} color="var(--secondary)" /> {t('liveWeather')}
           </h2>
           <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
             <input
               placeholder="Enter city..."
-              style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '6px 12px', color: '#fff', fontSize: '0.9rem' }}
-              onKeyDown={e => e.key === 'Enter' && fetchWeather(e.target.value)}
+              value={cityInput}
+              onChange={e => setCityInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && fetchWeather(cityInput)}
+              style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '6px 12px', color: '#fff', fontSize: '0.9rem', minWidth: '160px' }}
               list="mh-cities"
+              placeholder={t('enterCity')}
             />
             <datalist id="mh-cities">
-              {['Pune','Nashik','Nagpur','Ratnagiri','Kolhapur','Satara','Solapur','Ahmednagar','Jalgaon','Amravati','Latur','Nanded','Beed','Palghar','Mumbai'].map(c => <option key={c} value={c} />)}
+              {['Pune','Nashik','Nagpur','Ratnagiri','Kolhapur','Satara','Solapur','Ahmednagar','Jalgaon','Amravati','Latur','Nanded','Beed','Palghar','Mumbai','Sindhudurg','Sangli','Wardha','Yavatmal','Akola','Dhule'].map(c => <option key={c} value={c} />)}
             </datalist>
-            <button onClick={() => weather && fetchWeather(weather.location)} className="btn btn-primary" style={{ padding: '6px 14px', fontSize: '0.85rem' }}>
-              <RefreshCw size={14} style={{ marginRight: '4px' }} /> Refresh
+            <button onClick={() => fetchWeather(cityInput)} className="btn btn-primary" style={{ padding: '6px 14px', fontSize: '0.85rem' }}>
+              {t('searchCity')}
+            </button>
+            <button onClick={() => fetchWeather(cityInput)} className="btn btn-primary" style={{ padding: '6px 10px', fontSize: '0.85rem' }}>
+              <RefreshCw size={14} />
             </button>
           </div>
         </div>
@@ -102,10 +97,10 @@ export default function AlertsPage() {
               )}
             </p>
             <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-              <WeatherStat icon={<Thermometer size={20} color="#ef4444" />} label="Temperature" value={`${weather.temperature}°C`} />
-              <WeatherStat icon={<CloudRain size={20} color="#6366f1" />} label="Rainfall" value={`${weather.rainfall}mm/hr`} />
-              <WeatherStat icon={<Droplets size={20} color="#06b6d4" />} label="Humidity" value={`${weather.humidity}%`} />
-              <WeatherStat icon={<Wind size={20} color="#10b981" />} label="Wind Speed" value={`${weather.wind_speed}km/h`} />
+              <WeatherStat icon={<Thermometer size={20} color="#ef4444" />} label={t('temperature')} value={`${weather.temperature}°C`} />
+              <WeatherStat icon={<CloudRain size={20} color="#6366f1" />} label={t('rainfall')} value={`${weather.rainfall}mm/hr`} />
+              <WeatherStat icon={<Droplets size={20} color="#06b6d4" />} label={t('humidity')} value={`${weather.humidity}%`} />
+              <WeatherStat icon={<Wind size={20} color="#10b981" />} label={t('windSpeed')} value={`${weather.wind_speed}km/h`} />
             </div>
             {weather.is_severe && weather.anomaly !== 'None' && (
               <div style={{ marginTop: '1rem', padding: '10px 14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', color: '#ef4444', fontSize: '0.88rem' }}>
@@ -121,37 +116,37 @@ export default function AlertsPage() {
       {/* SMS Registration */}
       <div className="glass-panel" style={{ marginBottom: '2rem', background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.2)' }}>
         <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.8rem' }}>
-          <MessageSquare size={18} color="#6366f1" /> Register for SMS Weather Alerts
+          <MessageSquare size={18} color="#6366f1" /> {t('smsTitle')}
         </h3>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '1rem' }}>
-          Get instant SMS alerts when storms, heavy rainfall, or extreme heat are detected in your area.
+          {t('smsDesc')}
         </p>
         <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap' }}>
           <input
             type="tel"
-            placeholder="+91 9876543210"
+            placeholder={t('phonePlaceholder')}
             value={phone}
             onChange={e => setPhone(e.target.value)}
             style={{ flex: 1, minWidth: '200px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '8px 14px', color: '#fff', fontSize: '0.9rem' }}
           />
           <button onClick={handleRegisterPhone} className="btn btn-primary" style={{ padding: '8px 20px' }}>
-            Register
+            {t('btnRegister')}
           </button>
         </div>
         {phoneMsg && <p style={{ marginTop: '0.6rem', color: '#10b981', fontSize: '0.85rem' }}>✅ {phoneMsg}</p>}
         <p style={{ marginTop: '0.8rem', color: 'var(--text-muted)', fontSize: '0.78rem' }}>
-          Note: Add your Twilio credentials to <code>backend/.env</code> to enable SMS sending.
+          {t('smsNote')}
         </p>
       </div>
 
       {/* Alerts List */}
       <div className="glass-panel">
         <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.5rem' }}>
-          <AlertTriangle size={22} color="var(--warning)" /> System Alerts & Notifications
+          <AlertTriangle size={22} color="var(--warning)" /> {t('alertsTitle')}
         </h2>
 
         {alerts.length === 0 ? (
-          <p style={{ color: 'var(--text-muted)' }}>No active alerts. System is monitoring perfectly.</p>
+          <p style={{ color: 'var(--text-muted)' }}>{t('noAlerts')}</p>
         ) : (
           alerts.map((a, idx) => {
             const style = SEVERITY_STYLE[a.severity] || SEVERITY_STYLE.Normal;

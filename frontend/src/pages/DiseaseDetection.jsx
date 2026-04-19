@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { UploadCloud, Activity } from 'lucide-react';
+import { useLang } from '../i18n/LanguageContext';
 
 export default function DiseaseDetection() {
+  const { t } = useLang();
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
@@ -39,8 +41,8 @@ export default function DiseaseDetection() {
   return (
     <div className="grid">
       <div className="glass-panel" style={{ textAlign: 'center' }}>
-        <h2><Activity style={{ display: 'inline', marginRight: '10px' }}/> Crop Disease Detection</h2>
-        <p>Upload a high-quality image of the affected plant leaf to run our CNN diagnostic model.</p>
+        <h2><Activity style={{ display: 'inline', marginRight: '10px' }}/> {t('diseaseTitle')}</h2>
+        <p>{t('diseaseDesc')}</p>
         
         <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <label style={{ 
@@ -65,32 +67,32 @@ export default function DiseaseDetection() {
             ) : (
               <>
                 <UploadCloud size={48} color="var(--text-muted)" style={{ marginBottom: '1rem' }}/>
-                <span style={{ color: 'var(--text-muted)' }}>Click to browse or drag and drop image here</span>
+                <span style={{ color: 'var(--text-muted)' }}>{t('uploadPrompt')}</span>
               </>
             )}
             <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
           </label>
 
           <button onClick={handleUpload} className="btn btn-primary" style={{ marginTop: '2rem', padding: '1rem 3rem' }} disabled={!file || loading}>
-            {loading ? <div className="spinner" style={{width:'24px', height:'24px', borderWidth:'3px'}}/> : 'Analyze with AI'}
+            {loading ? <div className="spinner" style={{width:'24px', height:'24px', borderWidth:'3px'}}/> : t('btnAnalyzeAI')}
           </button>
         </div>
 
         {result && (
           <div className="glass-panel" style={{ marginTop: '2rem', background: 'rgba(16, 185, 129, 0.1)', borderColor: 'rgba(16, 185, 129, 0.3)' }}>
-            <h3 style={{ color: 'var(--primary)' }}>Analysis Complete</h3>
+            <h3 style={{ color: 'var(--primary)' }}>{t('analysisComplete')}</h3>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '3rem', margin: '1rem 0' }}>
               <div>
-                <span style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Detected Condition</span>
+                <span style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-muted)' }}>{t('detectedCondition')}</span>
                 <strong style={{ fontSize: '1.2rem' }}>{result.disease}</strong>
               </div>
               <div>
-                <span style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Confidence Score</span>
+                <span style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-muted)' }}>{t('confidenceScore')}</span>
                 <strong style={{ fontSize: '1.2rem' }}>{(result.confidence * 100).toFixed(1)}%</strong>
               </div>
             </div>
             <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '8px', marginTop: '1rem' }}>
-              <span style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Recommended Treatment</span>
+              <span style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>{t('recommendedTreatment')}</span>
               <p style={{ color: 'var(--text-main)' }}>{result.treatment}</p>
             </div>
           </div>

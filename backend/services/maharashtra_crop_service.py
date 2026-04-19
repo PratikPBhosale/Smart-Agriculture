@@ -230,6 +230,52 @@ MAHARASHTRA_CROP_DB: dict = {
         "featured": {},
         "region_notes": "Mumbai and surrounding areas have limited agricultural land. Coastal areas support rice and coconut cultivation.",
     },
+    "buldhana": {
+        "district": "Buldhana",
+        "region_label": "Vidarbha Region",
+        "crops": ["Cotton", "Soybean", "Jowar", "Wheat", "Tur (Pigeon Pea)", "Sunflower", "Chickpea"],
+        "featured": {
+            "cotton": {"variety": "Bt Cotton, Desi Cotton", "gi_tag": False, "season": "June–July sowing, October–December harvest"},
+            "soybean": {"variety": "JS-335, MAUS-71", "gi_tag": False, "season": "June–July sowing, October harvest"},
+        },
+        "region_notes": "Buldhana is a major cotton and soybean producing district in Vidarbha. The deep black cotton soil (regur) is ideal for cotton cultivation. Also known for jowar, tur, and chickpea production.",
+    },
+    "washim": {
+        "district": "Washim",
+        "region_label": "Vidarbha Region",
+        "crops": ["Cotton", "Soybean", "Jowar", "Tur", "Wheat"],
+        "featured": {
+            "cotton": {"variety": "Bt Cotton", "gi_tag": False, "season": "June–July sowing"},
+        },
+        "region_notes": "Washim is a cotton and soybean district in Vidarbha with black cotton soil.",
+    },
+    "hingoli": {
+        "district": "Hingoli",
+        "region_label": "Marathwada Region",
+        "crops": ["Soybean", "Cotton", "Jowar", "Tur", "Wheat"],
+        "featured": {
+            "soybean": {"variety": "JS-335", "gi_tag": False, "season": "June–July sowing"},
+        },
+        "region_notes": "Hingoli is a soybean and cotton producing district in Marathwada.",
+    },
+    "parbhani": {
+        "district": "Parbhani",
+        "region_label": "Marathwada Region",
+        "crops": ["Cotton", "Soybean", "Jowar", "Tur", "Sugarcane"],
+        "featured": {
+            "cotton": {"variety": "Bt Cotton", "gi_tag": False, "season": "June–July sowing"},
+        },
+        "region_notes": "Parbhani is a cotton and soybean district in Marathwada. Also known for sugarcane cultivation.",
+    },
+    "jalna": {
+        "district": "Jalna",
+        "region_label": "Marathwada Region",
+        "crops": ["Cotton", "Soybean", "Jowar", "Mosambi", "Pomegranate"],
+        "featured": {
+            "mosambi": {"variety": "Sweet Lime", "gi_tag": False, "season": "Year-round"},
+        },
+        "region_notes": "Jalna is known for cotton, soybean, and sweet lime (mosambi) cultivation in Marathwada.",
+    },
 }
 
 # ── Location Aliases ──────────────────────────────────────────────────────────
@@ -261,6 +307,9 @@ LOCATION_ALIASES: dict = {
     "solapur city": "solapur",
     "jalgoan": "jalgaon",
     "ratnagiri city": "ratnagiri",
+    "buldhana city": "buldhana",
+    "buldana": "buldhana",
+    "washim city": "washim",
 }
 
 

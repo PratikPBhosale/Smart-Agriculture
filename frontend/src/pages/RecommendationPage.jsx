@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Trophy, Sprout } from 'lucide-react';
+import { useLang } from '../i18n/LanguageContext';
 
 // Comprehensive crop image map — covers all 22 standard crops + extras
 // Keys are case-insensitive matched below
@@ -54,6 +55,7 @@ function getCropImage(cropName) {
 }
 
 export default function RecommendationPage() {
+  const { t } = useLang();
   const [recommendations, setRecommendations] = useState(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -88,7 +90,7 @@ export default function RecommendationPage() {
       navigate('/dashboard');
     } catch (err) {
       console.error(err);
-      alert('Failed to generate plan.');
+      alert(t('errorPlan'));
     }
     setGenerating(false);
   };
@@ -103,11 +105,20 @@ export default function RecommendationPage() {
     <div className="grid">
       <div className="glass-panel" style={{ textAlign: 'center' }}>
         <h2 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-          <Trophy size={26} color="gold" /> AI Crop Recommendations
+          <Trophy size={26} color="gold" /> {t('aiRecommendations')}
         </h2>
         <p style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
-          Based on your soil parameters and current weather conditions.
+          {t('basedOnSoil')}
         </p>
+        {recommendations?.location_notes && (
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: '8px',
+            background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)',
+            borderRadius: '10px', padding: '6px 14px', marginTop: '0.5rem', fontSize: '0.85rem', color: '#a5b4fc'
+          }}>
+            📍 {recommendations.location_notes}
+          </div>
+        )}
 
         <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '2rem', margin: '3rem 0' }}>
           {recommendations?.top_crops.map((crop, idx) => {
@@ -163,7 +174,7 @@ export default function RecommendationPage() {
                   {/* Score bar */}
                   <div style={{ marginTop: '0.8rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                      <span>Match Score</span>
+                      <span>{t('matchScore')}</span>
                       <span style={{ color: 'var(--primary)', fontWeight: 700 }}>{(score * 100).toFixed(0)}%</span>
                     </div>
                     <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '999px', height: '6px', overflow: 'hidden' }}>
@@ -190,7 +201,7 @@ export default function RecommendationPage() {
         >
           {generating
             ? <div className="spinner" style={{ width: '24px', height: '24px', borderWidth: '3px' }} />
-            : 'Generate Farming Plan'}
+            : t('btnGeneratePlan')}
         </button>
 
         {/* Maharashtra Regional Crops Section */}
@@ -201,10 +212,10 @@ export default function RecommendationPage() {
             border: '1px solid rgba(16,185,129,0.25)'
           }}>
             <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '0.5rem' }}>
-              🌾 {recommendations.region_label} Specialty Crops
+              🌾 {recommendations.region_label} {t('regionalTitle')}
             </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.2rem' }}>
-              Crops traditionally grown in <strong>{recommendations.district}</strong> district — consider these alongside the ML recommendations.
+              {t('regionalDesc')} <strong>{recommendations.district}</strong> {t('regionalDistrict')}
             </p>
             {recommendations.regional_crops?.length > 0 && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem' }}>

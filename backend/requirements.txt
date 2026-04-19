@@ -9,6 +9,7 @@ APScheduler
 python-dotenv
 pydantic
 google-genai
+groq
 pytest
 httpx
 tensorflow

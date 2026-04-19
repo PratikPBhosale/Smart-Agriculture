@@ -26,6 +26,7 @@ class CropRecommendResponse(BaseModel):
     region_label: str = ""
     district: str = ""
     is_maharashtra: bool = False
+    location_notes: str = ""  # Groq validation notes
 
 class TaskSchema(BaseModel):
     task: str
@@ -58,3 +59,13 @@ class AlertResponse(BaseModel):
 class WeatherAnomalyResponse(BaseModel):
     anomaly: str
     severity: str
+
+
+class ChatMessage(BaseModel):
+    role: str   # "user" or "assistant"
+    content: str
+
+class ChatRequest(BaseModel):
+    message: str
+    history: List[ChatMessage] = []
+    context: Optional[dict] = None  # optional soil/location context
