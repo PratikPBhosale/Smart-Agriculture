@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+psycopg2-binary
+sqlalchemy
+scikit-learn
+joblib
+requests
+APScheduler
+python-dotenv
+pydantic
+google-genai
+pytest
+httpx
+tensorflow
+Pillow
+numpy
+twilio
